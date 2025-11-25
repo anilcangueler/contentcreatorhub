@@ -1,0 +1,4 @@
+*.pkg
+*.dmg
+__pycache__/
+*.pyc

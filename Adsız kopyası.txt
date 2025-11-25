@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "🎬 Senaryo Masasi Aciliyor..."
+cd '/Volumes/MSI DATAMAG/YOUTUBE'
+/usr/local/bin/python3.11 -m streamlit run senarist.py
+echo "❌ Program kapandi. Hatayi yukarida okuyabilirsin."
+read -p "Pencereyi kapatmak icin Enter'a bas..."
