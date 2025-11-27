@@ -179,7 +179,7 @@ with col_editor:
                 st.rerun()
                 
     with col_nav2:
-            if st.button("⏮️ İlk Hale Dön", use_container_width=True, disabled=(not st.session_state['history'])):
+        if st.button("⏮️ İlk Hale Dön", use_container_width=True, disabled=(not st.session_state['history'])):
             if st.session_state['history']:
                 st.session_state['history_index'] = 0
                 content = st.session_state['history'][0]['content']
