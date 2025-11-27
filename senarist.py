@@ -111,7 +111,7 @@ def save_to_history(content, label="Versiyon"):
 
 def get_model():
     # Gemini 2.5 Flash - Best balance of speed and intelligence
-    return "gemini-exp-1206"
+    return "gemini-2.0-flash-exp"
 
 # --- DIALOGS ---
 @st.dialog("Geçmiş Versiyon")
