@@ -91,12 +91,10 @@ def parse_manual_time():
     except: pass
 
 # --- OTOMATİK API KEY OKUMA ---
-# Önce gizli dosyaya bakar, yoksa elle girmeni ister
 api_key = None
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
-    # Eğer dosya yoksa kenar çubuğunda sorar
     api_key = st.sidebar.text_input("API Anahtarı (secrets.toml bulunamadı)", type="password")
 
 # --- FONKSİYONLAR ---
@@ -112,8 +110,8 @@ def save_to_history(content, label="Versiyon"):
     st.session_state['history_index'] = len(st.session_state['history']) - 1
 
 def get_model():
-    # Directly return the best model
-    return "gemini-1.5-pro"
+    # Gemini 2.5 Flash - Best balance of speed and intelligence
+    return "gemini-exp-1206"
 
 # --- DIALOGS ---
 @st.dialog("Geçmiş Versiyon")
@@ -130,7 +128,7 @@ def show_history_item(item):
     with col_d2:
         if st.button("🛑 Bu Versiyona Geri Dön", type="primary", key="restore_dialog"):
             st.session_state['script_content'] = item['content']
-            st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1  # Force widget refresh
+            st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
             save_to_history(item['content'], f"Geri Yüklendi: {item['label']}")
             st.rerun()
 
@@ -163,7 +161,6 @@ with st.sidebar:
         for f in uploaded_files:
             try: 
                 content = f.read().decode("utf-8")
-                # Clean SBV/SRT if needed, otherwise just use raw text
                 if f.name.endswith('.sbv') or f.name.endswith('.srt'):
                     ref_text += clean_sbv(content) + "\n\n"
                 else:
@@ -172,45 +169,64 @@ with st.sidebar:
         st.session_state['style_ref'] = ref_text
         st.success(f"✅ {len(uploaded_files)} Dosya Yüklendi")
     else:
-        st.session_state['style_ref'] = ""  # Clear if no files
+        st.session_state['style_ref'] = ""
 
 # --- ANA EKRAN ---
 st.title("📝 Anıl'ın Senaryo Masası")
 
 # 1. GİRİŞ EKRANI
 if not st.session_state['script_content']:
-    # --- SMART IDEAS CALLBACKS ---
     if 'topic_input' not in st.session_state: st.session_state['topic_input'] = ""
     if 'details_input' not in st.session_state: st.session_state['details_input'] = ""
     
     def generate_topic_idea():
-        if not api_key: st.error("API Anahtarı yok!"); return
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(get_model())
-        category = st.session_state.get('selected_category', 'Genel')
+        if not api_key:
+            st.error("❌ API Anahtarı yok!")
+            return
         
-        # Prompt updated for broader, evergreen topics
-        prompt = f"YouTube için '{category}' kategorisinde, her zaman izlenebilecek (evergreen), genel kitleye hitap eden, merak uyandırıcı tek bir video konusu öner. Çok spesifik veya niş olmasın. Sadece başlığı yaz."
         try:
-            res = model.generate_content(prompt)
-            st.session_state.topic_input = res.text.strip().replace('"', '')
-        except: pass
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(get_model())
+            category = st.session_state.get('selected_category', 'Genel')
+            
+            prompt = f"YouTube için '{category}' kategorisinde, her zaman izlenebilecek (evergreen), genel kitleye hitap eden, merak uyandırıcı tek bir video konusu öner. Çok spesifik veya niş olmasın. Sadece başlığı yaz."
+            
+            with st.spinner('�� Konu önerisi alınıyor...'):
+                res = model.generate_content(prompt)
+                st.session_state.topic_input = res.text.strip().replace('"', '')
+            
+            st.success("✅ Konu önerildi!")
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"❌ Hata oluştu: {str(e)}")
 
     def generate_details_idea():
-        if not api_key: st.error("API Anahtarı yok!"); return
-        if not st.session_state.topic_input: st.warning("Önce bir konu belirle."); return
+        if not api_key:
+            st.error("❌ API Anahtarı yok!")
+            return
         
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(get_model())
-        prompt = f"'{st.session_state.topic_input}' konusu için YouTube videosu içeriği oluştur. İlgi çekici 3-4 ana madde (bullet point) yaz. Kısa ve öz olsun. SADECE MADDELERİ YAZ, başka açıklama EKLEME."
+        if not st.session_state.topic_input:
+            st.warning("⚠️ Önce bir konu belirle.")
+            return
+        
         try:
-            res = model.generate_content(prompt)
-            st.session_state.details_input = res.text.strip()
-        except: pass
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(get_model())
+            prompt = f"'{st.session_state.topic_input}' konusu için YouTube videosu içeriği oluştur. İlgi çekici 3-4 ana madde (bullet point) yaz. Kısa ve öz olsun. SADECE MADDELERİ YAZ, başka açıklama EKLEME."
+            
+            with st.spinner('📝 Detaylar oluşturuluyor...'):
+                res = model.generate_content(prompt)
+                st.session_state.details_input = res.text.strip()
+            
+            st.success("✅ Detaylar eklendi!")
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"❌ Hata oluştu: {str(e)}")
 
     st.markdown('<div class="white-card">', unsafe_allow_html=True)
     
-    # Kategori Seçimi - Expanded List
     categories = [
         "Teknoloji & Yazılım", "Vlog & Yaşam", "Eğitim & Kişisel Gelişim", 
         "Oyun & Gaming", "Eğlence & Komedi", "Finans & Ekonomi", "Seyahat & Gezi",
@@ -222,14 +238,12 @@ if not st.session_state['script_content']:
 
     col1, col2 = st.columns([2, 1])
     with col1:
-        # Konu Alanı
         c_t1, c_t2 = st.columns([8, 1])
         with c_t1:
             st.text_input("Konu", placeholder="Örn: Ev Stüdyosu", key="topic_input")
         with c_t2:
             st.button("🎲", on_click=generate_topic_idea, help="Rastgele Fikir Ver")
             
-        # Detaylar Alanı
         c_d1, c_d2 = st.columns([8, 1])
         with c_d1:
             st.text_area("Detaylar", placeholder="Değinilecek maddeler...", height=150, key="details_input")
@@ -237,7 +251,6 @@ if not st.session_state['script_content']:
             st.button("📝", on_click=generate_details_idea, help="İçerik Öner")
 
     with col2:
-        # DURATION COUNTER UI
         st.markdown("<label style='font-size:14px;'>Süre (Dk.Sn)</label>", unsafe_allow_html=True)
         cd1, cd2, cd3 = st.columns([1, 2, 1])
         cd1.button("➖", on_click=update_time, args=(-30,), use_container_width=True)
@@ -260,7 +273,6 @@ if not st.session_state['script_content']:
                 
                 st.write("✍️ İçerik oluşturuluyor...")
                 
-                # Use style_ref if available, otherwise use character type
                 if st.session_state.get('style_ref'):
                     prompt = f"""
                     GÖREV: YouTube Video Senaryo Yazarı (Stil Transferi).
@@ -298,7 +310,6 @@ if not st.session_state['script_content']:
                     OUTPUT: Sadece okuma metnini ver.
                     """
                 
-                # STREAMING IMPLEMENTATION
                 stream_placeholder = st.empty()
                 full_response = ""
                 
@@ -324,17 +335,15 @@ else:
     with col_editor:
         st.markdown('<div class="white-card">', unsafe_allow_html=True)
         
-        # HISTORY VIEWER
         if st.session_state['history']:
             st.subheader("📚 Geçmiş Versiyonlar")
             h_cols = st.columns(min(5, len(st.session_state['history'])))
-            for idx, item in enumerate(st.session_state['history'][-5:]):  # Show last 5
+            for idx, item in enumerate(st.session_state['history'][-5:]):
                 with h_cols[idx % 5]:
                     if st.button(f"{item['time']}\n{item['label'][:15]}...", key=f"history_{idx}", use_container_width=True):
                         show_history_item(item)
             st.markdown("---")
         
-        # QUICK ACTIONS TOOLBAR
         st.subheader("⚡ Hızlı İşlemler")
         quick_actions = [
             ("Daha Komik", "😂"), ("Daha Kısa", "✂️"), ("Daha Uzun", "📏"), 
@@ -368,7 +377,6 @@ else:
                             6. SADECE YENİ METNİ YAZ. Başka açıklama ekleme.
                             """
                             
-                            # STREAMING
                             stream_placeholder = st.empty()
                             full_response = ""
                             
@@ -388,7 +396,6 @@ else:
                             except Exception as e:
                                 st.error(f"Hata: {e}")
 
-        # Use unique key to force widget refresh when content changes programmatically
         if 'editor_key' not in st.session_state: st.session_state['editor_key'] = 0
         
         current_val = st.text_area(
@@ -399,11 +406,9 @@ else:
             label_visibility="collapsed"
         )
         
-        # Update session state with manual edits
         if current_val != st.session_state['script_content']:
             st.session_state['script_content'] = current_val
         
-        # --- NAVIGATION BUTTONS ---
         col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
         
         with col_nav1:
@@ -412,7 +417,7 @@ else:
                     st.session_state['history_index'] -= 1
                     content = st.session_state['history'][st.session_state['history_index']]['content']
                     st.session_state['script_content'] = content
-                    st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1  # Force widget refresh
+                    st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
                     st.rerun()
                     
         with col_nav2:
@@ -421,7 +426,7 @@ else:
                     st.session_state['history_index'] = 0
                     content = st.session_state['history'][0]['content']
                     st.session_state['script_content'] = content
-                    st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1  # Force widget refresh
+                    st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
                     st.rerun()
 
         with col_nav3:
@@ -430,7 +435,7 @@ else:
                     st.session_state['history_index'] += 1
                     content = st.session_state['history'][st.session_state['history_index']]['content']
                     st.session_state['script_content'] = content
-                    st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1  # Force widget refresh
+                    st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
                     st.rerun()
 
         st.download_button("💾 Kaydet (.txt)", current_val, file_name="Senaryo.txt")
@@ -453,7 +458,6 @@ else:
             model_name = get_model()
             try:
                 model = genai.GenerativeModel(model_name)
-                # Prompt updated to avoid prefixes
                 refine_prompt = f"""
                 GÖREV: Aşağıdaki senaryo revize komutunu, bir yapay zeka modelinin daha iyi anlayacağı şekilde netleştir, detaylandır ve profesyonelleştir.
                 
@@ -484,9 +488,7 @@ else:
                 genai.configure(api_key=api_key)
                 model_name = get_model()
                 with st.status("✨ Revize ediliyor...", expanded=True) as status:
-                    # Increase temperature for creativity/change
                     model = genai.GenerativeModel(model_name, generation_config=genai.types.GenerationConfig(temperature=0.8))
-                    # Editördeki anlık metni al - session state'den güncel hali alalım
                     live_text = st.session_state.get('main_editor', st.session_state['script_content'])
                     
                     revize_prompt = f"""
@@ -504,7 +506,6 @@ else:
                     6. SADECE YENİ METNİ YAZ. Başka açıklama ekleme.
                     """
                     
-                    # STREAMING
                     stream_placeholder = st.empty()
                     full_response = ""
                     
