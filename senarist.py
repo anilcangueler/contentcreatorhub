@@ -11,7 +11,13 @@ st.set_page_config(page_title="Contentivity", page_icon=None, layout="wide")
 st.markdown("""
 <style>
     .stApp { background-color: #f8f9fa; }
-    h1 { color: #1a1a1a; font-family: 'Helvetica Neue', sans-serif; text-align: center; font-weight: 700; }
+    h1 { 
+        color: #1a1a1a; 
+        font-family: 'Helvetica Neue', sans-serif; 
+        text-align: center; 
+        font-weight: 700;
+        margin-bottom: 1rem !important;
+    }
     h2, h3 { color: #333; font-family: 'Helvetica Neue', sans-serif; }
     .white-card { 
         background-color: white; 
