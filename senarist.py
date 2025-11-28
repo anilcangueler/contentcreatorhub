@@ -66,6 +66,13 @@ st.markdown("""
         background-color: #e0e2e6;
         color: #000;
     }
+    /* Reduce spacing between title and content */
+    [data-testid="stAppViewContainer"] > section > div:nth-child(1) > div > div:nth-child(1) > div > div:nth-child(2) {
+        padding-bottom: 0.5rem !important;
+    }
+    [data-testid="stAppViewContainer"] > section > div:nth-child(1) > div > div:nth-child(3) {
+        margin-top: 0.5rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
