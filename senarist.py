@@ -1,6 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 import re
+import random
+import time
 
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Contentivity", page_icon=None, layout="wide")
@@ -181,7 +183,6 @@ with st.sidebar:
 
 # --- ANA EKRAN ---
 st.title("Contentivity")
-
 # 1. GİRİŞ EKRANI
 if not st.session_state['script_content']:
     if 'topic_input' not in st.session_state: st.session_state['topic_input'] = ""
@@ -194,10 +195,17 @@ if not st.session_state['script_content']:
         
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(get_model())
+            model = genai.GenerativeModel(get_model(), generation_config=genai.types.GenerationConfig(temperature=1.0))
             category = st.session_state.get('selected_category', 'Genel')
             
-            prompt = f"YouTube için '{category}' kategorisinde, her zaman izlenebilecek (evergreen), genel kitleye hitap eden, merak uyandırıcı tek bir video konusu öner. Çok spesifik veya niş olmasın. Sadece başlığı yaz."
+            # Add random seed to force unique results
+            random_seed = random.randint(1, 1000000)
+            timestamp = int(time.time())
+            
+            prompt = f"""YouTube için '{category}' kategorisinde, her zaman izlenebilecek (evergreen), genel kitleye hitap eden, merak uyandırıcı tek bir video konusu öner. Çok spesifik veya niş olmasın. Sadece başlığı yaz.
+            
+Rastgele ID: {random_seed}-{timestamp}
+Bu ID'yi GÖRMEZDEN GEL, sadece her seferinde farklı bir konu üret."""
             
             with st.spinner('Konu önerisi alınıyor...'):
                 res = model.generate_content(prompt)
@@ -220,8 +228,16 @@ if not st.session_state['script_content']:
         
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(get_model())
-            prompt = f"'{st.session_state.topic_input}' konusu için YouTube videosu içeriği oluştur. İlgi çekici 3-4 ana madde (bullet point) yaz. Kısa ve öz olsun. SADECE MADDELERİ YAZ, başka açıklama EKLEME."
+            model = genai.GenerativeModel(get_model(), generation_config=genai.types.GenerationConfig(temperature=1.0))
+            
+            # Add random seed to force unique results
+            random_seed = random.randint(1, 1000000)
+            timestamp = int(time.time())
+            
+            prompt = f"""'{st.session_state.topic_input}' konusu için YouTube videosu içeriği oluştur. İlgi çekici 3-4 ana madde (bullet point) yaz. Kısa ve öz olsun. SADECE MADDELERİ YAZ, başka açıklama EKLEME.
+            
+Rastgele ID: {random_seed}-{timestamp}
+Bu ID'yi GÖRMEZDEN GEL, sadece her seferinde farklı maddeler üret."""
             
             with st.spinner('Detaylar oluşturuluyor...'):
                 res = model.generate_content(prompt)
@@ -263,9 +279,9 @@ if not st.session_state['script_content']:
         with col2:
             st.markdown("<label style='font-size:14px;'>Süre (Dk.Sn)</label>", unsafe_allow_html=True)
             cd1, cd2, cd3 = st.columns([1, 2, 1])
-            cd1.button("-", on_click=update_time, args=(-30,), use_container_width=True)
+            cd1.button("➖", on_click=update_time, args=(-30,), use_container_width=True)
             cd2.text_input("Süre", key="duration_input", on_change=parse_manual_time, label_visibility="collapsed")
-            cd3.button("+", on_click=update_time, args=(30,), use_container_width=True)
+            cd3.button("➕", on_click=update_time, args=(30,), use_container_width=True)
             
             st.markdown("<br><br>", unsafe_allow_html=True)
             create_btn = st.button("Senaryoyu Yaz")
