@@ -3,7 +3,7 @@ import google.generativeai as genai
 import re
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Anıl'ın Senaryo Masası", page_icon="📝", layout="wide")
+st.set_page_config(page_title="Contentivity", page_icon=None, layout="wide")
 
 # --- CLEAN DESIGN ---
 st.markdown("""
@@ -110,8 +110,16 @@ def save_to_history(content, label="Versiyon"):
     st.session_state['history_index'] = len(st.session_state['history']) - 1
 
 def get_model():
-    # Gemini 2.5 Flash - Best balance of speed and intelligence
+    # Gemini 2.0 Flash Experimental - Best for creative writing with unlimited RPD
     return "gemini-2.0-flash-exp"
+
+# --- SAFETY SETTINGS ---
+safety_settings = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
 
 # --- DIALOGS ---
 @st.dialog("Geçmiş Versiyon")
@@ -122,11 +130,11 @@ def show_history_item(item):
     
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        if st.button("✅ Kapat", key="close_dialog"):
+        if st.button("Kapat", key="close_dialog"):
             st.rerun()
             
     with col_d2:
-        if st.button("🛑 Bu Versiyona Geri Dön", type="primary", key="restore_dialog"):
+        if st.button("Bu Versiyona Geri Dön", type="primary", key="restore_dialog"):
             st.session_state['script_content'] = item['content']
             st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
             save_to_history(item['content'], f"Geri Yüklendi: {item['label']}")
@@ -134,11 +142,11 @@ def show_history_item(item):
 
 # --- YAN MENÜ ---
 with st.sidebar:
-    st.header("🎛️ Ayarlar")
+    st.header("Ayarlar")
     if api_key:
-        st.success("🔑 API Anahtarı Tanımlı")
+        st.success("API Anahtarı Tanımlı")
     else:
-        st.warning("⚠️ API Anahtarı Girilmedi")
+        st.warning("API Anahtarı Girilmedi")
         
     st.markdown("---")
     
@@ -167,12 +175,12 @@ with st.sidebar:
                     ref_text += content + "\n\n"
             except: pass
         st.session_state['style_ref'] = ref_text
-        st.success(f"✅ {len(uploaded_files)} Dosya Yüklendi")
+        st.success(f"{len(uploaded_files)} Dosya Yüklendi")
     else:
         st.session_state['style_ref'] = ""
 
 # --- ANA EKRAN ---
-st.title("📝 Anıl'ın Senaryo Masası")
+st.title("Contentivity")
 
 # 1. GİRİŞ EKRANI
 if not st.session_state['script_content']:
@@ -181,7 +189,7 @@ if not st.session_state['script_content']:
     
     def generate_topic_idea():
         if not api_key:
-            st.error("❌ API Anahtarı yok!")
+            st.error("API Anahtarı yok!")
             return
         
         try:
@@ -191,23 +199,23 @@ if not st.session_state['script_content']:
             
             prompt = f"YouTube için '{category}' kategorisinde, her zaman izlenebilecek (evergreen), genel kitleye hitap eden, merak uyandırıcı tek bir video konusu öner. Çok spesifik veya niş olmasın. Sadece başlığı yaz."
             
-            with st.spinner('�� Konu önerisi alınıyor...'):
+            with st.spinner('Konu önerisi alınıyor...'):
                 res = model.generate_content(prompt)
                 st.session_state.topic_input = res.text.strip().replace('"', '')
             
-            st.success("✅ Konu önerildi!")
+            st.success("Konu önerildi!")
             st.rerun()
             
         except Exception as e:
-            st.error(f"❌ Hata oluştu: {str(e)}")
+            st.error(f"Hata oluştu: {str(e)}")
 
     def generate_details_idea():
         if not api_key:
-            st.error("❌ API Anahtarı yok!")
+            st.error("API Anahtarı yok!")
             return
         
         if not st.session_state.topic_input:
-            st.warning("⚠️ Önce bir konu belirle.")
+            st.warning("Önce bir konu belirle.")
             return
         
         try:
@@ -215,118 +223,102 @@ if not st.session_state['script_content']:
             model = genai.GenerativeModel(get_model())
             prompt = f"'{st.session_state.topic_input}' konusu için YouTube videosu içeriği oluştur. İlgi çekici 3-4 ana madde (bullet point) yaz. Kısa ve öz olsun. SADECE MADDELERİ YAZ, başka açıklama EKLEME."
             
-            with st.spinner('📝 Detaylar oluşturuluyor...'):
+            with st.spinner('Detaylar oluşturuluyor...'):
                 res = model.generate_content(prompt)
                 st.session_state.details_input = res.text.strip()
             
-            st.success("✅ Detaylar eklendi!")
+            st.success("Detaylar eklendi!")
             st.rerun()
             
         except Exception as e:
-            st.error(f"❌ Hata oluştu: {str(e)}")
+            st.error(f"Hata oluştu: {str(e)}")
 
-    st.markdown('<div class="white-card">', unsafe_allow_html=True)
-    
-    categories = [
-        "Teknoloji & Yazılım", "Vlog & Yaşam", "Eğitim & Kişisel Gelişim", 
-        "Oyun & Gaming", "Eğlence & Komedi", "Finans & Ekonomi", "Seyahat & Gezi",
-        "Sağlık & Fitness", "Yemek & Tarifler", "Bilim & Teknoloji", 
-        "Tarih & Belgesel", "Motivasyon & Psikoloji", "Sanat & Tasarım"
-    ]
-    selected_category = st.selectbox("Kategori Seç", categories, key="selected_category")
-    st.markdown("---")
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        c_t1, c_t2 = st.columns([8, 1])
-        with c_t1:
-            st.text_input("Konu", placeholder="Örn: Ev Stüdyosu", key="topic_input")
-        with c_t2:
-            st.button("🎲", on_click=generate_topic_idea, help="Rastgele Fikir Ver")
-            
-        c_d1, c_d2 = st.columns([8, 1])
-        with c_d1:
-            st.text_area("Detaylar", placeholder="Değinilecek maddeler...", height=150, key="details_input")
-        with c_d2:
-            st.button("📝", on_click=generate_details_idea, help="İçerik Öner")
-
-    with col2:
-        st.markdown("<label style='font-size:14px;'>Süre (Dk.Sn)</label>", unsafe_allow_html=True)
-        cd1, cd2, cd3 = st.columns([1, 2, 1])
-        cd1.button("➖", on_click=update_time, args=(-30,), use_container_width=True)
-        cd2.text_input("Süre", key="duration_input", on_change=parse_manual_time, label_visibility="collapsed")
-        cd3.button("➕", on_click=update_time, args=(30,), use_container_width=True)
+    input_container = st.container()
+    with input_container:
+        st.markdown('<div class="white-card">', unsafe_allow_html=True)
         
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        create_btn = st.button("🚀 Senaryoyu Yaz")
-    st.markdown('</div>', unsafe_allow_html=True)
+        categories = [
+            "Teknoloji & Yazılım", "Vlog & Yaşam", "Eğitim & Kişisel Gelişim", 
+            "Oyun & Gaming", "Eğlence & Komedi", "Finans & Ekonomi", "Seyahat & Gezi",
+            "Sağlık & Fitness", "Yemek & Tarifler", "Bilim & Teknoloji", 
+            "Tarih & Belgesel", "Motivasyon & Psikoloji", "Sanat & Tasarım"
+        ]
+        selected_category = st.selectbox("Kategori Seç", categories, key="selected_category")
+        st.markdown("---")
+
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            c_t1, c_t2 = st.columns([8, 1])
+            with c_t1:
+                st.text_input("Konu", placeholder="Örn: Ev Stüdyosu", key="topic_input")
+            with c_t2:
+                st.button("Rastgele", on_click=generate_topic_idea, help="Rastgele Fikir Ver")
+                
+            c_d1, c_d2 = st.columns([8, 1])
+            with c_d1:
+                st.text_area("Detaylar", placeholder="Değinilecek maddeler...", height=150, key="details_input")
+            with c_d2:
+                st.button("Öner", on_click=generate_details_idea, help="İçerik Öner")
+
+        with col2:
+            st.markdown("<label style='font-size:14px;'>Süre (Dk.Sn)</label>", unsafe_allow_html=True)
+            cd1, cd2, cd3 = st.columns([1, 2, 1])
+            cd1.button("-", on_click=update_time, args=(-30,), use_container_width=True)
+            cd2.text_input("Süre", key="duration_input", on_change=parse_manual_time, label_visibility="collapsed")
+            cd3.button("+", on_click=update_time, args=(30,), use_container_width=True)
+            
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            create_btn = st.button("Senaryoyu Yaz")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if create_btn:
         if not api_key: 
             st.error("API Anahtarı yok! secrets.toml dosyasını kontrol et.")
         else:
-            genai.configure(api_key=api_key)
-            model_name = get_model()
-            with st.status("🚀 Senaryo hazırlanıyor...", expanded=True) as status:
-                st.write("🧠 Model yükleniyor...")
-                model = genai.GenerativeModel(model_name)
+            if st.session_state.get('style_ref'):
+                prompt = f"""
+                GÖREV: YouTube Video Senaryo Yazarı (Stil Transferi).
                 
-                st.write("✍️ İçerik oluşturuluyor...")
-                
-                if st.session_state.get('style_ref'):
-                    prompt = f"""
-                    GÖREV: YouTube Video Senaryo Yazarı (Stil Transferi).
-                    
-                    KESİN KURALLAR:
-                    1. Referans metindeki HİKAYELERİ, ANILARI, ÖZEL İSİMLERİ TAMAMEN GÖRMEZDEN GEL - Sadece "Ses Tonu" ve "Konuşma Tarzı"nı kopyala.
-                    2. SADECE OKUMA METNİNİ YAZ - "Harika bir konu!", "İşte taslak" gibi AÇIKLAMALAR EKLEME.
-                    3. Direkt senaryo metnini ver - İntro, açıklama, başlık yazma.
-                    4. Türkçe dil kurallarına %100 uy - İmla, noktalama kusursuz olsun.
+                KESİN KURALLAR:
+                1. Referans metindeki HİKAYELERİ, ANILARI, ÖZEL İSİMLERİ TAMAMEN GÖRMEZDEN GEL - Sadece "Ses Tonu" ve "Konuşma Tarzı"nı kopyala.
+                2. SADECE OKUMA METNİNİ YAZ - "Harika bir konu!", "İşte taslak" gibi AÇIKLAMALAR EKLEME.
+                3. Direkt senaryo metnini ver - İntro, açıklama, başlık yazma.
+                4. Türkçe dil kurallarına %100 uy - İmla, noktalama kusursuz olsun.
+                5. GERÇEKLİK KONTROLÜ: Eğer konu gerçek bir ürün/kişi/olay ise, BİLDİĞİN GERÇEK BİLGİLERİ kullan. Asla uydurma isim veya özellik yazma.
 
-                    REFERANS METİN (Sadece Üslup İçin):
-                    {st.session_state['style_ref'][:30000]}
+                REFERANS METİN (Sadece Üslup İçin):
+                {st.session_state['style_ref'][:30000]}
 
-                    YENİ KONU: {st.session_state.topic_input}
-                    DETAYLAR: {st.session_state.details_input}
-                    HEDEF SÜRE: {st.session_state['duration_input']} dakika
-                    
-                    OUTPUT: Sadece okuma metnini ver. Başka hiçbir şey yazma.
-                    """
-                else:
-                    character = st.session_state.get('character_type', 'Samimi')
-                    prompt = f"""
-                    GÖREV: YouTube Video Senaryo Yazarı.
-                    
-                    KESİN KURALLAR:
-                    1. SADECE OKUMA METNİNİ YAZ - "Harika bir konu!", "İşte taslak" gibi AÇIKLAMALAR EKLEME.
-                    2. Direkt senaryo metnini ver - İntro, açıklama, başlık yazma.
-                    3. Türkçe dil kurallarına %100 uy - İmla, noktalama kusursuz olsun.
-                    4. Karakter: {character} - Bu tonu kullan.
+                YENİ KONU: {st.session_state.topic_input}
+                DETAYLAR: {st.session_state.details_input}
+                HEDEF SÜRE: {st.session_state['duration_input']} dakika
+                
+                OUTPUT: Sadece okuma metnini ver. Başka hiçbir şey yazma.
+                """
+            else:
+                character = st.session_state.get('character_type', 'Samimi')
+                prompt = f"""
+                GÖREV: YouTube Video Senaryo Yazarı.
+                
+                KESİN KURALLAR:
+                1. SADECE OKUMA METNİNİ YAZ - "Harika bir konu!", "İşte taslak" gibi AÇIKLAMALAR EKLEME.
+                2. Direkt senaryo metnini ver - İntro, açıklama, başlık yazma.
+                3. Türkçe dil kurallarına %100 uy - İmla, noktalama kusursuz olsun.
+                4. Karakter: {character} - Bu tonu kullan.
+                5. GERÇEKLİK KONTROLÜ: Eğer konu gerçek bir ürün/kişi/olay ise, BİLDİĞİN GERÇEK BİLGİLERİ kullan. Asla uydurma isim veya özellik yazma.
 
-                    KONU: {st.session_state.topic_input}
-                    DETAYLAR: {st.session_state.details_input}
-                    HEDEF SÜRE: {st.session_state['duration_input']} dakika
-                    
-                    OUTPUT: Sadece okuma metnini ver.
-                    """
+                KONU: {st.session_state.topic_input}
+                DETAYLAR: {st.session_state.details_input}
+                HEDEF SÜRE: {st.session_state['duration_input']} dakika
                 
-                stream_placeholder = st.empty()
-                full_response = ""
-                
-                try:
-                    response = model.generate_content(prompt, stream=True)
-                    for chunk in response:
-                        if chunk.text:
-                            full_response += chunk.text
-                            stream_placeholder.markdown(f"**Yazılıyor...**\n\n{full_response}")
-                    
-                    stream_placeholder.empty()
-                    st.session_state['script_content'] = full_response
-                    save_to_history(full_response, "İlk Taslak")
-                    status.update(label="✅ Senaryo Hazır!", state="complete", expanded=False)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Hata: {e}")
+                OUTPUT: Sadece okuma metnini ver.
+                """
+            
+            # Set task and switch view
+            st.session_state['generation_task'] = prompt
+            st.session_state['generation_temp'] = 0.8 # Creative for initial
+            st.session_state['script_content'] = " " # Placeholder to switch to editor view
+            st.rerun()
 
 # 2. DÜZENLEME EKRANI
 else:
@@ -336,7 +328,7 @@ else:
         st.markdown('<div class="white-card">', unsafe_allow_html=True)
         
         if st.session_state['history']:
-            st.subheader("📚 Geçmiş Versiyonlar")
+            st.subheader("Geçmiş Versiyonlar")
             h_cols = st.columns(min(5, len(st.session_state['history'])))
             for idx, item in enumerate(st.session_state['history'][-5:]):
                 with h_cols[idx % 5]:
@@ -344,67 +336,103 @@ else:
                         show_history_item(item)
             st.markdown("---")
         
-        st.subheader("⚡ Hızlı İşlemler")
+        st.subheader("Hızlı İşlemler")
         quick_actions = [
-            ("Daha Komik", "😂"), ("Daha Kısa", "✂️"), ("Daha Uzun", "📏"), 
-            ("Dramatik", "🎭"), ("Türkçe Düzelt", "📖")
+            ("Daha Komik", ""), ("Daha Kısa", ""), ("Daha Uzun", ""), 
+            ("Dramatik", ""), ("Türkçe Düzelt", "")
         ]
         
         quick_cols = st.columns(len(quick_actions))
         for idx, (action, emoji) in enumerate(quick_actions):
             with quick_cols[idx]:
-                if st.button(f"{emoji} {action}", key=f"quick_{action}", use_container_width=True):
+                if st.button(f"{action}", key=f"quick_{action}", use_container_width=True):
                     if not api_key: st.error("API yok.")
                     else:
-                        genai.configure(api_key=api_key)
-                        model_name = get_model()
-                        with st.status(f"{action} uygulanıyor...", expanded=True) as status:
-                            model = genai.GenerativeModel(model_name)
-                            live_text = st.session_state.get('main_editor', st.session_state['script_content'])
-                            
-                            revize_prompt = f"""
-                            GÖREV: Mevcut senaryoyu YENİDEN YAZ.
-                            KULLANICI İSTEĞİ: {action}
-                            MEVCUT METİN:
-                            {live_text}
-                            
-                            KESİN KURALLAR:
-                            1. Metni KÖKTEN DEĞİŞTİRME hakkına sahipsin.
-                            2. Kullanıcı isteğini (örneğin "Daha Kısa") YERİNE GETİRMEK İÇİN metni sil, ekle veya yeniden yaz.
-                            3. Asla "Yapamam" deme, sadece yap.
-                            4. Yazarın üslubunu koru ama içeriği isteğe göre şekillendir.
-                            5. DİL BİLGİSİ: Türkçe imla ve noktalama kurallarına %100 uy. Anlatım bozukluğu yapma. Akıcı ve mantıklı cümleler kur.
-                            6. SADECE YENİ METNİ YAZ. Başka açıklama ekleme.
-                            """
-                            
-                            stream_placeholder = st.empty()
-                            full_response = ""
-                            
-                            try:
-                                response = model.generate_content(revize_prompt, stream=True)
-                                for chunk in response:
-                                    if chunk.text:
-                                        full_response += chunk.text
-                                        stream_placeholder.markdown(f"**Yazılıyor...**\n\n{full_response}")
-                                
-                                stream_placeholder.empty()
-                                st.session_state['script_content'] = full_response
-                                st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
-                                save_to_history(full_response, f"Hızlı: {action}")
-                                status.update(label="✅ Tamamlandı!", state="complete", expanded=False)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Hata: {e}")
+                        live_text = st.session_state.get('main_editor', st.session_state['script_content'])
+                        
+                        revize_prompt = f"""
+                        GÖREV: Mevcut senaryoyu KULLANICI İSTEĞİNE göre DÜZENLE (Revize Et).
+                        
+                        KULLANICI İSTEĞİ: {action}
+                        
+                        MEVCUT METİN:
+                        {live_text}
+                        
+                        KESİN KURALLAR:
+                        1. KONUYU, ANA FİKRİ VE ÖRNEKLERİ ASLA DEĞİŞTİRME.
+                        2. Sadece kullanıcının istediği değişikliği uygula.
+                        3. Metnin içindeki özel isimleri, sayıları ve verileri KORU.
+                        4. METNİ KOMPLE BAŞTAN YAZMA. Sadece gerekli cümleleri düzenle.
+                        5. GERÇEKLİK KONTROLÜ: Kullanıcının verdiği ürün/kişi isimlerini AYNEN KULLAN. Asla "sansürlemek" için uydurma isimler (örn: Yaşlı Kurt) kullanma.
+                        6. DİL BİLGİSİ: Türkçe imla ve noktalama kurallarına %100 uy.
+                        7. ÇIKTI: Sadece revize edilmiş tam metni ver.
+                        """
+                        
+                        st.session_state['generation_task'] = revize_prompt
+                        st.session_state['generation_temp'] = 0.3 # Focused for revision
+                        st.rerun()
 
         if 'editor_key' not in st.session_state: st.session_state['editor_key'] = 0
         
-        current_val = st.text_area(
-            "Metin:", 
-            value=st.session_state['script_content'], 
-            height=700, 
-            key=f"main_editor_{st.session_state['editor_key']}", 
-            label_visibility="collapsed"
-        )
+        if 'editor_key' not in st.session_state: st.session_state['editor_key'] = 0
+        
+        # Check for pending generation task (Unified Handler)
+        if 'generation_task' in st.session_state:
+            # Create streaming placeholder in main editor area
+            stream_container = st.empty()
+            full_response = ""
+            
+            try:
+                stream_container.markdown("**AI Yazıyor...**")
+                
+                genai.configure(api_key=api_key)
+                model_name = get_model()
+                temp = st.session_state.get('generation_temp', 0.7)
+                model = genai.GenerativeModel(model_name, generation_config=genai.types.GenerationConfig(temperature=temp), safety_settings=safety_settings)
+                
+                response = model.generate_content(st.session_state['generation_task'], stream=True)
+                for chunk in response:
+                    if chunk.text:
+                        full_response += chunk.text
+                        # Update placeholder with streaming content
+                        stream_container.markdown(f"**AI Yazıyor...**\n\n{full_response}")
+                
+                # Clear placeholder and update session state
+                stream_container.empty()
+                st.session_state['script_content'] = full_response
+                st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
+                
+                # Determine label based on context (simple heuristic)
+                task_text = st.session_state['generation_task']
+                if "Stil Transferi" in task_text or "YouTube Video Senaryo Yazarı" in task_text:
+                    label = "İlk Taslak"
+                elif "KULLANICI İSTEĞİ" in task_text:
+                    # Extract request from prompt if possible, or just generic
+                    label = "Revize"
+                else:
+                    label = "AI Versiyon"
+                    
+                save_to_history(full_response, label)
+                
+                # Clear task
+                del st.session_state['generation_task']
+                if 'generation_temp' in st.session_state: del st.session_state['generation_temp']
+                st.rerun()
+                
+            except Exception as e:
+                stream_container.empty()
+                st.error(f"Hata: {e}")
+                if 'generation_task' in st.session_state: del st.session_state['generation_task']
+                if 'generation_temp' in st.session_state: del st.session_state['generation_temp']
+
+        else:
+            current_val = st.text_area(
+                "Metin:", 
+                value=st.session_state['script_content'], 
+                height=700, 
+                key=f"main_editor_{st.session_state['editor_key']}", 
+                label_visibility="collapsed"
+            )
         
         if current_val != st.session_state['script_content']:
             st.session_state['script_content'] = current_val
@@ -412,7 +440,7 @@ else:
         col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
         
         with col_nav1:
-            if st.button("⬅️ Geri", use_container_width=True, disabled=(st.session_state['history_index'] <= 0)):
+            if st.button("Geri", use_container_width=True, disabled=(st.session_state['history_index'] <= 0)):
                 if st.session_state['history_index'] > 0:
                     st.session_state['history_index'] -= 1
                     content = st.session_state['history'][st.session_state['history_index']]['content']
@@ -421,7 +449,7 @@ else:
                     st.rerun()
                     
         with col_nav2:
-            if st.button("⏮️ İlk Hale Dön", use_container_width=True, disabled=(not st.session_state['history'])):
+            if st.button("İlk Hale Dön", use_container_width=True, disabled=(not st.session_state['history'])):
                 if st.session_state['history']:
                     st.session_state['history_index'] = 0
                     content = st.session_state['history'][0]['content']
@@ -430,7 +458,7 @@ else:
                     st.rerun()
 
         with col_nav3:
-            if st.button("İleri ➡️", use_container_width=True, disabled=(st.session_state['history_index'] >= len(st.session_state['history']) - 1)):
+            if st.button("İleri", use_container_width=True, disabled=(st.session_state['history_index'] >= len(st.session_state['history']) - 1)):
                 if st.session_state['history_index'] < len(st.session_state['history']) - 1:
                     st.session_state['history_index'] += 1
                     content = st.session_state['history'][st.session_state['history_index']]['content']
@@ -438,12 +466,12 @@ else:
                     st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
                     st.rerun()
 
-        st.download_button("💾 Kaydet (.txt)", current_val, file_name="Senaryo.txt")
+        st.download_button("Kaydet (.txt)", current_val, file_name="Senaryo.txt")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_ai:
         st.markdown('<div class="white-card">', unsafe_allow_html=True)
-        st.subheader("🤖 AI Revize")
+        st.subheader("AI Revize")
         if 'revize_input' not in st.session_state: st.session_state['revize_input'] = ""
         
         def refine_revision_prompt():
@@ -477,56 +505,43 @@ else:
         
         c_ai_1, c_ai_2 = st.columns([1, 1])
         with c_ai_1:
-            st.button("🪄 AI Touch", on_click=refine_revision_prompt, help="Komutunu profesyonelleştir")
+            st.button("AI Touch", on_click=refine_revision_prompt, help="Komutunu profesyonelleştir")
         with c_ai_2:
             if st.session_state.revize_input:
-                st.button("❌ Vazgeç", on_click=clear_revision_prompt)
+                st.button("Vazgeç", on_click=clear_revision_prompt)
         
-        if st.button("✨ Revize Et", type="primary"):
+        if st.button("Revize Et", type="primary"):
             if not api_key: st.error("API yok.")
             else:
-                genai.configure(api_key=api_key)
-                model_name = get_model()
-                with st.status("✨ Revize ediliyor...", expanded=True) as status:
-                    model = genai.GenerativeModel(model_name, generation_config=genai.types.GenerationConfig(temperature=0.8))
-                    live_text = st.session_state.get('main_editor', st.session_state['script_content'])
-                    
-                    revize_prompt = f"""
-                    GÖREV: Mevcut senaryoyu YENİDEN YAZ.
-                    KULLANICI İSTEĞİ: {st.session_state.revize_input}
-                    MEVCUT METİN:
-                    {live_text}
-                    
-                    KESİN KURALLAR:
-                    1. Metni KÖKTEN DEĞİŞTİRME hakkına sahipsin.
-                    2. Kullanıcı isteğini YERİNE GETİRMEK İÇİN metni sil, ekle veya yeniden yaz.
-                    3. Asla "Yapamam" deme, sadece yap.
-                    4. Yazarın üslubunu koru ama içeriği isteğe göre şekillendir.
-                    5. DİL BİLGİSİ: Türkçe imla ve noktalama kurallarına %100 uy. Anlatım bozukluğu yapma. Akıcı ve mantıklı cümleler kur.
-                    6. SADECE YENİ METNİ YAZ. Başka açıklama ekleme.
-                    """
-                    
-                    stream_placeholder = st.empty()
-                    full_response = ""
-                    
-                    try:
-                        response = model.generate_content(revize_prompt, stream=True)
-                        for chunk in response:
-                            if chunk.text:
-                                full_response += chunk.text
-                                stream_placeholder.markdown(f"**Yazılıyor...**\n\n{full_response}")
-                        
-                        stream_placeholder.empty()
-                        st.session_state['script_content'] = full_response
-                        st.session_state['editor_key'] = st.session_state.get('editor_key', 0) + 1
-                        save_to_history(full_response, f"Revize: {st.session_state.revize_input[:20]}...")
-                        status.update(label="✅ Revize Tamamlandı!", state="complete", expanded=False)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Hata: {e}")
+                live_text = st.session_state.get('main_editor', st.session_state['script_content'])
+                
+                revize_prompt = f"""
+            GÖREV: Mevcut senaryoyu KULLANICI İSTEĞİNE göre DÜZENLE (Revize Et).
+            
+            KULLANICI İSTEĞİ: {st.session_state.revize_input}
+            
+            MEVCUT METİN:
+            {live_text}
+            
+            KESİN KURALLAR:
+            1. KONUYU, ANA FİKRİ VE ÖRNEKLERİ ASLA DEĞİŞTİRME.
+            2. Sadece kullanıcının istediği değişikliği uygula.
+            3. Metnin içindeki özel isimleri, sayıları ve verileri KORU.
+            4. METNİ KOMPLE BAŞTAN YAZMA. Sadece gerekli cümleleri düzenle.
+            5. GERÇEKLİK KONTROLÜ: Kullanıcının verdiği ürün/kişi isimlerini AYNEN KULLAN. Asla "sansürlemek" için uydurma isimler (örn: Yaşlı Kurt) kullanma.
+            6. ARAŞTIRMA: Eğer bahsedilen konu gerçek bir ürünse, teknik detayları doğru kullan.
+            7. DİL BİLGİSİ: Türkçe imla ve noktalama kurallarına %100 uy.
+            8. ÇIKTI: Sadece revize edilmiş tam metni ver.
+            """
+                
+                # Set task and rerun to trigger processing in main editor column
+                st.session_state['generation_task'] = revize_prompt
+                st.session_state['generation_temp'] = 0.3 # Focused for revision
+                st.rerun()
         
         st.markdown("---")
-        if st.button("🗑️ Sıfırla"):
+        if st.button("Sıfırla"):
             st.session_state['script_content'] = ""
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
+
