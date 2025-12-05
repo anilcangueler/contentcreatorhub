@@ -1,4 +1,3 @@
-```json
 {
   "name": "contentcreatorhub",
   "private": true,
@@ -73,4 +72,4 @@
     "vite": "^5.1.4"
   }
 }
-```
+
